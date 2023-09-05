@@ -1,0 +1,132 @@
+---
+title: "GEOPROCESSAMENTO - BICT Mar - EXERCÍCIOS"
+author: "Seu-nome-RA-Turno"
+date: "Data: `r format(Sys.Date(), '%d-%m-%Y')`"
+output: pdf_document
+---
+# Rode esta linha ANTES de iniciar o exercício.
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Aula 2: Manipulação de atributos não espaciais em tabelas
+
+### 1. Carrege o pacote `tidyverse`
+```{r}
+library(tidyverse)
+```
+
+### 2. Importe o arquivo `municipios_ibge2022.csv`
+```{r}
+munibge <- read_csv('/home/rstudio/dados/municipios_ibge2022.csv', col_types = cols(uf_cod = 'c'))
+```
+
+### 3. Crie duas novas colunas com o número de moradores por domicílio em 2022 e com a densidade populacional em 2022 (habitantes/km2).
+
+```{r}
+munibge <- munibge %>% 
+  mutate(moradores_por_domicilio = populacao_2022-domicilios_2022) %>% 
+  mutate(dens_pop = populacao_2022/area_km2)
+```
+
+
+### 4. Agrupe a tabela resultante por estado e obtenha as seguintes variáveis (sumarisadas por estado):
+
+* Área total.#feito
+* Número total de municípios.#feito
+* População total em 2022.#feito
+* População média por município.
+* Desvio padrão da população por município.
+* Coeficiente de variação da população por município.
+* Número de moradores médio por município.
+* Desvio padrão do número de moradores por município.
+* Coeficiente de variação do número de moradores por município.
+
+```{r}
+# Área total
+area_total_por_uf <- munibge %>%
+  group_by(uf) %>%
+  summarise(total_area_km2 = sum(area_km2))
+
+# Número total de municípios
+num_total_municipios_por_uf <- munibge %>%
+  group_by(uf) %>%
+  summarise(numero_municipios = n_distinct(municipio))
+
+# População total em 2022
+pop_total_por_uf <- munibge %>%
+  group_by(uf) %>%
+  summarise(total_populacao_2022 = sum(populacao_2022, na.rm = TRUE))
+
+
+# População média por município
+media_populacao_2022 <- munibge %>%
+  group_by(uf) %>%
+  summarise(media_populacao_2022 = mean(populacao_2022, na.rm = TRUE))
+
+
+# # Desvio padrão da população por município
+# desvio_padrao_populacao <- munibge %>%
+#   group_by(uf, municipio) %>%
+#   summarise(desvio_padrao_populacao = sd(populacao_2022, na.rm = TRUE))
+
+# Coeficiente de variação da população por município
+# coeficiente_variacao_populacao <- munibge %>%
+#   group_by(uf, municipio) %>%
+#   summarise(coeficiente_variacao_populacao = sd(populacao_2022, na.rm = TRUE) / mean(populacao_2022, na.rm = TRUE) * 100)
+
+# Número de moradores médio por município
+media_moradores_por_domicilio <- munibge %>%
+  group_by(uf, municipio) %>%
+  summarise(media_moradores_por_domicilio = mean(moradores_por_domicilio, na.rm = TRUE))
+
+# # Desvio padrão do número de moradores por município
+# desvio_padrao_moradores_por_domicilio <- munibge %>%
+#   group_by(uf, municipio) %>%
+#   summarise(desvio_padrao_moradores_por_domicilio = sd(moradores_por_domicilio, na.rm = TRUE))
+
+# Coeficiente de variação do número de moradores por município
+# coeficiente_variacao_moradores_por_domicilio <- munibge %>%
+#   group_by(uf, municipio) %>%
+#   summarise(coeficiente_variacao_moradores_por_domicilio = sd(moradores_por_domicilio, na.rm = TRUE) / mean(moradores_por_domicilio, na.rm = TRUE) * 100)
+
+```
+
+
+### 5. Liste os 3 estados com maiores populações.
+
+```{r}
+maiores_populacoes <- munibge %>% 
+  group_by(uf) %>% 
+  summarize(populacao_total = sum(populacao_2022, na.rm = TRUE)) %>% 
+  arrange(desc(populacao_total)) %>% 
+  head(n = 3) %>% 
+  ungroup()
+
+```
+
+
+### 6. Liste os 5 estados com maiores números médios de moradores por domicílio.
+
+```{r}
+estados_com_maior_media_moradores <- munibge %>% 
+  group_by(uf) %>% 
+  summarize(media_moradores_por_domicilio = mean(moradores_por_domicilio, na.rm = TRUE)) %>% 
+  arrange(desc(media_moradores_por_domicilio)) %>% 
+  head(n = 5) %>% 
+  ungroup()
+
+```
+
+### 7. Liste os 5 estados com menores números médios de moradores por domicílio.
+
+```{r}
+estados_com_menor_media_moradores <- munibge %>% 
+  group_by(uf) %>% 
+  summarize(media_moradores_por_domicilio = mean(moradores_por_domicilio, na.rm = TRUE)) %>% 
+  arrange(media_moradores_por_domicilio) %>% 
+  head(n = 5) %>% 
+  ungroup()
+```
+

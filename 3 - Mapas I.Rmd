@@ -1,0 +1,199 @@
+---
+title: "GEOPROCESSAMENTO - BICT Mar - EXERCÍCIOS"
+subtitle: "Aula 3: Manipulação de atributos espaciais em tabelas"
+author: "BeatrizMilitelo-134573-Noturno"
+date: "Data: `r format(Sys.Date(), '%d-%m-%Y')`"
+output: pdf_document
+---
+
+## Aula 3: Manipulação de atributos espaciais em tabelas
+
+### 1. Carrege o pacote `tidyverse`
+
+```{r, include = TRUE, message = FALSE}
+library(here)
+library(tidyverse)
+library(sf)
+library(patchwork)
+library(scales)
+```
+
+**Observações iniciais
+ - Rode o comando abaixo *antes** de iniciar o exercício clicando no triângulo verde à esquerda na célula.
+ 
+```{r setup, include = TRUE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_knit$set(root.dir = here()) 
+```
+
+### 2. Repita as operações realizadas na arquivo da `Aula_3.R` para os estados de Santa Catarina e Paraná.
+
+1. Faça um mapa para os dois estados preenchido com seus municípios.
+```{r}
+munibge <- read_csv('dados/municipios_ibge2022.csv', col_types = cols(uf_cod = 'c'))
+prsc_poly <- st_read('dados/PR_SC/prsc.shp')
+
+ggplot(prsc_poly) +
+  geom_sf()
+
+ggplot(prsc_poly, aes(color = SIGLA_UF)) +
+  geom_sf()
+
+uf_palette <- c('PR' = '#d30c7b',
+                'SC' = '#dbb4ad')
+
+ggplot(prsc_poly, aes(fill = SIGLA_UF)) +
+  geom_sf() +
+  labs(fill = '') +
+  scale_fill_manual(values = uf_palette) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+  
+
+2. Um mapa para os dois estados preenchido com os a **densidade populacional** dos municípios.
+
+```{r}
+# ------ Unificando o data frame por estado ------ 
+uf_poly <- prsc_poly %>%
+  group_by(SIGLA_UF) %>%
+  summarize() %>%
+  st_union(by_feature = TRUE)
+
+uf_poly
+
+# Mapa dos estados
+ggplot(uf_poly, aes(fill = SIGLA_UF)) +
+  geom_sf() +
+  labs(fill = '') +
+  scale_fill_manual(values = uf_palette) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Plota poligonos com limites de municípios
+ggplot(prsc_poly) +
+  geom_sf()
+
+# Plota poligonos com limites de municípios identificando os estados
+ggplot(prsc_poly, aes(color = SIGLA_UF)) +
+  geom_sf()
+
+# Cria coluna com código completo de município
+munibge2 <- munibge %>% 
+  unite(mun_cod_c, uf_cod, municipio_cod, sep = '') %>% 
+  select(-area_km2)
+
+# Unifica com dados do IBGE cm função `left_join`
+prsc_poly_e <- prsc_poly %>% 
+  left_join(munibge2, by = join_by(CD_MUN == mun_cod_c,
+                                   NM_MUN == municipio,
+                                   SIGLA_UF == uf)) %>% 
+  mutate(densidade_2022 = round(populacao_2022/AREA_KM2,2),
+         crescimento = populacao_2022-populacao_2010,
+         cresc_percentual = round((populacao_2022/populacao_2010 - 1) * 100, 2),
+         .before = geometry)
+
+# Verfica novo data.frame
+glimpse(prsc_poly_e)
+
+# Mapa final
+# Gráfico prsc_poly_e + uf_poly
+br <- c(1, 100, 1000, 5000, 10000)
+plt_se <- ggplot() +
+  geom_sf(data = prsc_poly_e, aes(fill = densidade_2022), color = 'grey') +
+  geom_sf(data = uf_poly, aes(color = SIGLA_UF), fill = NA, linewidth = 0.25) +
+  labs(title = 'Densidade populacional',
+       fill = expression('Hab/Km'^2)) +
+  scale_color_manual(values = uf_palette) +
+  theme_bw() +
+  guides(color = 'none') +
+  scale_fill_gradient(low = "white", high = "purple", trans = 'sqrt',
+                      breaks = br,
+                      labels = scales::comma(br)) +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+
+
+plt_se
+
+ggsave(filename = 'Densidade_prsc.png', plot = plt_se, width = 8, height = 6)
+```
+
+
+3. Um mapa para os dois estado preenchido com os o **crescimento percentual** dos municípios entre 2012 e 2022.
+```{r}
+
+# ------ Unificando o data frame por estado ------ 
+uf_poly <- prsc_poly %>%
+  group_by(SIGLA_UF) %>%
+  summarize() %>%
+  st_union(by_feature = TRUE)
+
+uf_poly
+
+# Mapa dos estados
+ggplot(uf_poly, aes(fill = SIGLA_UF)) +
+  geom_sf() +
+  labs(fill = '') +
+  scale_fill_manual(values = uf_palette) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Plota poligonos com limites de municípios
+ggplot(prsc_poly) +
+  geom_sf()
+
+# Plota poligonos com limites de municípios identificando os estados
+ggplot(prsc_poly, aes(color = SIGLA_UF)) +
+  geom_sf()
+
+# Cria coluna com código completo de município
+munibge2 <- munibge %>% 
+  unite(mun_cod_c, uf_cod, municipio_cod, sep = '') %>% 
+  select(-area_km2)
+
+# Unifica com dados do IBGE cm função `left_join`
+prsc_poly_e <- prsc_poly %>% 
+  left_join(munibge2, by = join_by(CD_MUN == mun_cod_c,
+                                   NM_MUN == municipio,
+                                   SIGLA_UF == uf)) %>% 
+  mutate(densidade_2022 = round(populacao_2022/AREA_KM2,2),
+         crescimento = populacao_2022-populacao_2010,
+         cresc_percentual = round((populacao_2022/populacao_2010 - 1) * 100, 2),
+         .before = geometry)
+
+# Verfica novo data.frame
+glimpse(prsc_poly_e)
+
+# Mapa final
+# Gráfico prsc_poly_e + uf_poly
+br <- c(1, 100, 1000, 5000, 10000)
+plt_se <- ggplot() +
+  geom_sf(data = prsc_poly_e, aes(fill = cresc_percentual), color = 'grey') +
+  geom_sf(data = uf_poly, aes(color = SIGLA_UF), fill = NA, linewidth = 0.25) +
+  labs(title = 'Crescimento Percentual',
+       fill = expression('Hab/Km'^2)) +
+  scale_color_manual(values = uf_palette) +
+  theme_bw() +
+  guides(color = 'none') +
+  scale_fill_gradient(low = "white", high = "purple", trans = 'sqrt',
+                      breaks = br,
+                      labels = scales::comma(br)) +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+
+
+plt_se
+
+ggsave(filename = 'Cresc-percentual_prsc.png', plot = plt_se, width = 8, height = 6)
+
+```
+
+
+
+4. Use o comando `ggsave()` para criar uma figura em .png do mapa gerado nos itens 2 e 3.
+```{r}
+# Já está nos códigos anteriores
+
+```
